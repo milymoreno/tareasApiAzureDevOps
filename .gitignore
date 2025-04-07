@@ -1,0 +1,35 @@
+# Entorno virtual
+venv/
+.env/
+*.env
+
+# Archivos Python compilados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración del editor
+.vscode/
+.idea/
+
+# Archivos de tracking y datos
+data/
+tracking/
+
+# Archivos de Excel generados
+*.xlsx
+*.xls
+
+# Archivos JSON temporales de PRs
+pr_tracking_*.json
+
+# Archivos de prueba
+*.tmp
+*.bak
