@@ -1,0 +1,184 @@
+{
+    "3179": {
+        "estado": "aprobado",
+        "timestamp": "2025-04-02T08:41:43.658108",
+        "observaciones": "PR limpio, sin observaciones.",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "2135": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.663574",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "2002": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.666966",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "1922": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.671234",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "930": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.680396",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "420": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.685701",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "365": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.691689",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "29": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:43.694830",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-back"
+    },
+    "2506": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:44.095328",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2m-back"
+    },
+    "1004": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:44.384411",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-data"
+    },
+    "1001": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:44.393880",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-data"
+    },
+    "971": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:44.402983",
+        "observaciones": "PR no es reciente",
+        "proyecto": "P2P",
+        "repositorio": "bt-p2p-data"
+    },
+    "3037": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.222313",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "2947": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.225988",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "2136": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.229903",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "1630": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.233463",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "1158": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.236498",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "1045": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.239961",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "1005": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.243879",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "451": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.248831",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "384": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.254099",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "289": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.258028",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    },
+    "2978": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.601555",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-data"
+    },
+    "2682": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.605398",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-data"
+    },
+    "1425": {
+        "estado": "omitido",
+        "timestamp": "2025-04-02T08:41:45.831078",
+        "observaciones": "PR no es reciente",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-functions"
+    },
+    "3180": {
+        "estado": "aprobado",
+        "timestamp": "2025-04-02T10:03:11.446306",
+        "observaciones": "PR limpio, sin observaciones.",
+        "proyecto": "RIEL",
+        "repositorio": "bt-riel-back"
+    }
+}
