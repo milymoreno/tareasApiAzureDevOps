@@ -1,12 +1,14 @@
 import imaplib
 import email
 import os
-from datetime import date
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 import json
 import pandas as pd
 from typing import List, Dict
+
+
 
 from email.header import decode_header
 
@@ -69,6 +71,80 @@ def leer_reuniones_json(ruta_archivo: str) -> List[Dict]:
 
     return reuniones
 
+# ✅ Esta es tu función principal para extraer el JSON, ya sea del cuerpo o del adjunto
+
+def extraer_reuniones_json_gmail(usuario, clave_app, asunto_filtro, fecha_objetivo):  
+
+    mail = imaplib.IMAP4_SSL("imap.gmail.com")
+    mail.login(usuario, clave_app)
+    mail.select("inbox")
+
+    # Filtrar por correos de los últimos 3 días
+    fecha_limite = (datetime.now() - timedelta(days=3)).strftime('%d-%b-%Y')
+
+    status, mensajes = mail.search(None, f'(SINCE {fecha_limite})')
+    correos_ids = mensajes[0].split()[::-1]
+
+    for correo_id in correos_ids:
+        res, msg_data = mail.fetch(correo_id, "(RFC822)")
+        if res != "OK":
+            continue
+
+        raw_email = msg_data[0][1]
+        mensaje = email.message_from_bytes(raw_email)
+
+        subject_raw = mensaje["Subject"]
+        logger.info(f"🔍 Revisando correo con raw subject: {subject_raw}")
+
+        if not subject_raw:
+            logger.warning("⚠️ Correo sin asunto. Saltando...")
+            continue
+
+        asunto = decode_header(subject_raw)[0][0]
+        if isinstance(asunto, bytes):
+            asunto = asunto.decode("utf-8")
+        logger.info(f"📧 Asunto decodificado: {asunto}")
+
+        if not asunto.startswith(asunto_filtro):
+            continue
+
+        # 1️⃣ Leer JSON del cuerpo
+        if mensaje.is_multipart():
+            for parte in mensaje.walk():
+                content_type = parte.get_content_type()
+                content_disposition = str(parte.get("Content-Disposition"))
+
+                if "attachment" not in content_disposition and content_type == "text/plain":
+                    cuerpo = parte.get_payload(decode=True).decode("utf-8")
+                    try:
+                        reuniones = json.loads(cuerpo.strip())
+                        logger.info("✅ JSON encontrado en el cuerpo del mensaje")
+                        return reuniones
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error procesando cuerpo como JSON: {e}")
+
+        else:
+            cuerpo = mensaje.get_payload(decode=True).decode("utf-8")
+            try:
+                reuniones = json.loads(cuerpo.strip())
+                logger.info("✅ JSON encontrado en el cuerpo del mensaje (sin multipart)")
+                return reuniones
+            except Exception as e:
+                logger.warning(f"⚠️ Error procesando cuerpo como JSON: {e}")
+
+        # 2️⃣ Si no está en el cuerpo, buscar adjunto .json
+        for parte in mensaje.walk():
+            if parte.get_content_disposition() == "attachment" and parte.get_filename().endswith(".json"):
+                nombre_archivo = parte.get_filename()
+                ruta_archivo = os.path.join("data", nombre_archivo)
+                with open(ruta_archivo, "wb") as f:
+                    f.write(parte.get_payload(decode=True))
+                logger.info(f"📎 JSON descargado desde adjunto: {ruta_archivo}")
+                with open(ruta_archivo, "r", encoding="utf-8") as f:
+                    return json.load(f)
+
+    logger.warning("❌ No se encontró correo con JSON válido.")
+    return []
 
 
 def extraer_json_de_gmail(usuario, clave_app, asunto_filtro):
@@ -76,7 +152,12 @@ def extraer_json_de_gmail(usuario, clave_app, asunto_filtro):
     mail.login(usuario, clave_app)
     mail.select("inbox")
 
-    status, mensajes = mail.search(None, 'ALL')
+    #status, mensajes = mail.search(None, 'ALL')    
+   
+    fecha_limite = (datetime.now() - timedelta(days=3)).strftime('%d-%b-%Y')
+    status, mensajes = mail.search(None, f'(SINCE {fecha_limite})')
+
+        
     correos_ids = mensajes[0].split()[::-1]  # buscar desde el más reciente
 
     for correo_id in correos_ids:
@@ -97,23 +178,35 @@ def extraer_json_de_gmail(usuario, clave_app, asunto_filtro):
         asunto = decodificar_asunto(mensaje["Subject"])
         logger.info(f"📧 Asunto decodificado: {asunto}")
 
-        if not asunto.startswith(asunto_filtro):
-            continue
-
+        # if not asunto.startswith(asunto_filtro):
+        #     logger.debug(f"📛 Asunto no coincide: '{asunto}' vs filtro '{asunto_filtro}'")
+        #     continue
+        
+        if asunto.startswith(asunto_filtro):
+            logger.info("✅ Asunto coincide, inspeccionando partes del mensaje...")
+            for parte in mensaje.walk():
+                content_type = parte.get_content_type()
+                content_disposition = str(parte.get("Content-Disposition"))
+                filename = parte.get_filename()
+                logger.info(f"📦 Parte encontrada: content_type={content_type}, disposition={content_disposition}, filename={filename}")
 
         if mensaje.is_multipart():
             for parte in mensaje.walk():
                 content_type = parte.get_content_type()
                 content_disposition = str(parte.get("Content-Disposition"))
+                logger.debug(f"🔍 Parte encontrada: content_type={content_type}, disposition={content_disposition}")
+                logger.debug(f"📦 Parte: content_type={content_type}, disposition={content_disposition}, filename={parte.get_filename()}")
+
 
                 # ✅ Buscar cuerpo del mensaje con JSON
                 if "attachment" not in content_disposition and content_type == "text/plain":
                     cuerpo = parte.get_payload(decode=True).decode()
+                    logger.debug(f"📨 Cuerpo recibido:\n{cuerpo}")
                     try:
                         return json.loads(cuerpo.strip())
                     except Exception as e:
-                        print(f"⚠️ Error procesando cuerpo como JSON: {e}")
-
+                        logger.warning(f"⚠️ Error procesando cuerpo como JSON: {e}")
+                
         else:
             cuerpo = mensaje.get_payload(decode=True).decode()
             try:
@@ -134,3 +227,15 @@ def decodificar_asunto(subject_raw):
         else:
             subject_final += parte
     return subject_final
+
+
+def redondear_duracion(duracion):
+    """
+    Redondea una duración en horas al múltiplo más cercano de 0.25.
+    Ejemplos:
+        0.13 → 0.25
+        0.37 → 0.5
+        1.78 → 1.75
+    """
+    return round(duracion * 4) / 4
+

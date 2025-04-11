@@ -1,9 +1,11 @@
+import json
 from fastapi import FastAPI, Query
 from dotenv import load_dotenv
 import os
 import pandas as pd
 from datetime import date,datetime, time
 import random
+from dateutil.parser import parse
 
 import logging
 
@@ -15,7 +17,7 @@ from services.azure_client import (
 from utils.reuniones_excel import leer_reuniones_excel
 from utils.read_json_gmail import leer_reuniones_json
 
-from config import EXCEL_PATH
+from config import EXCEL_PATH, GMAIL_USER, GMAIL_APP_PASSWORD,ASUNTO_JSON 
 
 TITULOS_TAREA_GENERICA = [
     "Revisión de Logs y Azure Portal",
@@ -29,6 +31,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 #logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 from utils.pr_json import cargar_prs_revisados_por_fecha
+from utils.read_json_gmail import extraer_json_de_gmail, redondear_duracion
 
 
 from services.azure_devops import (
@@ -75,6 +78,157 @@ def obtener_habilitador_semanal_endpoint(
         return {"error": str(e)}
 
 
+@app.post("/registrar-reuniones-json")
+def registrar_reuniones_json(
+    habilitador_id: int = Query(None),
+    usuario: str = Query("Mildred Moreno"),
+    fecha: str = Query(..., embed=True)  
+):
+    logger.info(f"🧪 DEBUG: Fecha recibida directamente antes del try → {fecha}")
+    try:
+        logger.info(f"📅 Fecha recibida: {fecha}")
+        logger.info(f"👤 Usuario recibido: {usuario}")
+        fecha_actual = datetime.strptime(fecha, "%Y-%m-%d").date()
+
+        if not habilitador_id or habilitador_id <= 0:
+            logger.info("🔄 Habilitador no proporcionado o inválido. Buscando automáticamente...")
+            habilitador_id = obtener_habilitador_semanal(fecha)
+            logger.info(f"✅ Habilitador automático encontrado: {habilitador_id}")
+
+        reuniones = extraer_json_de_gmail(GMAIL_USER, GMAIL_APP_PASSWORD, ASUNTO_JSON)       
+        logger.info(f"📨 JSON recibido del correo:\n{json.dumps(reuniones, indent=2, ensure_ascii=False)}")
+
+         
+        if not reuniones:
+            return {"mensaje": "No se encontraron reuniones en el JSON del correo."}
+
+        logger.info(f"📆 Fecha de ejecución: {fecha_actual}")
+        tareas_existentes = obtener_actividades_dia(usuario, fecha_actual)
+        detalles = obtener_detalles_actividades(tareas_existentes)
+        horas_actuales = calcular_total_horas(detalles)
+
+        logger.info(f"🕒 Horas acumuladas hoy: {horas_actuales:.2f}")
+        horas_disponibles = 9.0 - horas_actuales
+        logger.info(f"🟩 Horas disponibles: {horas_disponibles:.2f}")
+
+        tareas_a_crear = []
+        reuniones_mildred = []
+        reuniones_normales = []
+
+        for reunion in reuniones:
+            if "fecha" in reunion and reunion["fecha"] != fecha_actual:
+                logger.info(f"⏩ Ignorando reunión fuera de hoy: {reunion['titulo']}")
+                continue
+
+            organizador = reunion["organizador"].strip().lower()
+            if organizador == "mildred.moreno@innovacionypagos.com.pa":
+                reuniones_mildred.append(reunion)
+            else:
+                reuniones_normales.append(reunion)
+
+        proyecto = obtener_proyecto_predeterminado()        
+
+        for reunion in reuniones_normales:
+            # Parsear strings a datetime
+            hora_inicio = parse(reunion["horaInicio"])
+            hora_fin = parse(reunion["horaFin"])
+            
+            # Calcular duración en horas
+            duracion = (hora_fin - hora_inicio).total_seconds() / 3600
+            duracion = redondear_duracion(duracion)  # Redondeo al más cercano .25
+            
+            reunion["horaInicio"] = hora_inicio
+            reunion["horaFin"] = hora_fin
+            reunion["duracion_horas"] = duracion
+
+            if duracion <= horas_disponibles:
+                pass
+            elif horas_disponibles > 0:
+                duracion = redondear_duracion(horas_disponibles)
+                reunion["horaFin"] = hora_inicio + pd.Timedelta(hours=duracion)
+                reunion["duracion_horas"] = duracion
+                logger.warning(f"⚠️ Reunión recortada por tiempo: {reunion['titulo']} → {duracion:.2f}h")
+            else:
+                logger.warning(f"🚩 Tiempo agotado. Reunión omitida: {reunion['titulo']}")
+                continue
+
+            payload = generar_payload_tarea(
+                titulo=reunion["titulo"],
+                descripcion=reunion.get("descripcion", ""),
+                usuario=usuario,
+                duracion_horas=duracion,
+                fecha=hora_inicio,
+                hora_fin=reunion["horaFin"],
+                habilitador_id=habilitador_id
+            )
+
+            resultado = crear_tarea_en_azure(payload, proyecto)
+            if resultado["success"]:
+                reunion["id"] = resultado["id"]
+                reunion["url"] = resultado["url"]
+                tareas_a_crear.append(reunion)
+                logger.info(f"✅ Tarea creada: {reunion['titulo']} - ID: {resultado['id']}")
+                horas_disponibles -= duracion
+            else:
+                logger.error(f"❌ Error al crear la tarea: {resultado['status_code']} - {resultado['error']}")
+                
+                
+        # 🧮 Calcular duración para reuniones de Mildred
+        for r in reuniones_mildred:
+            hora_inicio = parse(r["horaInicio"])
+            hora_fin = parse(r["horaFin"])
+            duracion = (hora_fin - hora_inicio).total_seconds() / 3600
+            r["horaInicio"] = hora_inicio
+            r["horaFin"] = hora_fin
+            r["duracion_horas"] = redondear_duracion(duracion)
+
+        if reuniones_mildred:
+            total_horas_mildred = sum(r["duracion_horas"] for r in reuniones_mildred)
+            if total_horas_mildred <= horas_disponibles:
+                titulos = "\n".join(f"- {r['titulo']}" for r in reuniones_mildred)
+                descripcion_consolidada = f"Reuniones organizadas por Mildred:\n{titulos}"
+                hora_inicio = min(r["horaInicio"] for r in reuniones_mildred)
+                hora_fin = hora_inicio + pd.Timedelta(hours=total_horas_mildred)
+
+                payload = generar_payload_tarea(
+                    titulo="Reuniones varias y con equipo",
+                    descripcion=descripcion_consolidada,
+                    usuario=usuario,
+                    duracion_horas=total_horas_mildred,
+                    fecha=hora_inicio,
+                    hora_fin=hora_fin,
+                    habilitador_id=habilitador_id
+                )
+
+                resultado = crear_tarea_en_azure(payload, proyecto)
+                if resultado["success"]:
+                    tareas_a_crear.append({
+                        "titulo": "Reuniones de sincronización varias",
+                        "descripcion": descripcion_consolidada,
+                        "duracion_horas": total_horas_mildred,
+                        "id": resultado["id"],
+                        "url": resultado["url"]
+                    })
+                    logger.info(f"✅ Tarea consolidada creada: Reuniones varias y con equipo - ID: {resultado['id']}")
+                    horas_disponibles -= total_horas_mildred
+                else:
+                    logger.error(f"❌ Error al crear la tarea consolidada: {resultado['status_code']} - {resultado['error']}")
+
+        total_horas_registradas = sum(t["duracion_horas"] for t in tareas_a_crear)
+        tareas_cerradas = cerrar_tareas_por_fecha(usuario, fecha_actual, proyecto)
+
+        return {
+            "mensaje": f"{len(tareas_a_crear)} reuniones registradas exitosamente",
+            "horas_registradas": total_horas_registradas,
+            "horas_restantes": horas_disponibles,
+            "tareas": tareas_a_crear,
+            "mensaje_cerradas": f"{len(tareas_cerradas)} tareas cerradas",
+            "ids_cerrados": tareas_cerradas
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error en el registro de reuniones: {e}", exc_info=True)
+        return {"error": str(e)}
 
 
 
@@ -377,7 +531,7 @@ def registrar_tarea_generica(
 
 @app.get("/total-horas-dia")
 def total_horas_dia_endpoint(
-    usuario: str = Query(..., embed=True),
+    usuario: str = Query("Mildred Moreno"),
     fecha: str = Query(..., embed=True)
 ):
     try:
