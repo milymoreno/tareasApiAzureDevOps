@@ -9,9 +9,12 @@ import logging
 
 from services.azure_client import (
     obtener_proyecto_predeterminado,
-    obtener_habilitador_semanal)
+    obtener_habilitador_semanal
+)
 
 from utils.reuniones_excel import leer_reuniones_excel
+from utils.read_json_gmail import leer_reuniones_json
+
 from config import EXCEL_PATH
 
 TITULOS_TAREA_GENERICA = [
@@ -22,8 +25,8 @@ TITULOS_TAREA_GENERICA = [
     "Investigación técnica interna"
 ]
 
-#logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+#logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 from utils.pr_json import cargar_prs_revisados_por_fecha
 
@@ -71,6 +74,10 @@ def obtener_habilitador_semanal_endpoint(
         logger.exception("❌ Error al obtener habilitador semanal")
         return {"error": str(e)}
 
+
+
+
+
 @app.post("/registrar-reuniones")
 def registrar_reuniones(
     habilitador_id: int = Query(None),
@@ -84,9 +91,7 @@ def registrar_reuniones(
 
         # Si no se pasa el habilitador_id, intentar obtenerlo automáticamente
         if not habilitador_id or habilitador_id <= 0:
-            logger.info("🔄 Habilitador no proporcionado o inválido. Buscando automáticamente...")
-            # habilitador_info = obtener_habilitador_semanal(fecha)
-            # habilitador_id = habilitador_info["id"]
+            logger.info("🔄 Habilitador no proporcionado o inválido. Buscando automáticamente...")            
             habilitador_id = obtener_habilitador_semanal(fecha)  # ✅ Ya estás obteniendo directamente el ID
             logger.info(f"✅ Habilitador automático encontrado: {habilitador_id}")
 
@@ -100,8 +105,9 @@ def registrar_reuniones(
             return {"mensaje": "No hay reuniones en el archivo."}
 
         logger.info(f"📆 Fecha de ejecución: {fecha_actual}")
-
+        
         tareas_existentes = obtener_actividades_dia(usuario, fecha_actual)
+        #tareas_existentes = obtener_horas_totales_del_dia(usuario, fecha_actual)
         detalles = obtener_detalles_actividades(tareas_existentes)
         horas_actuales = calcular_total_horas(detalles)
 
@@ -333,9 +339,7 @@ def registrar_tarea_generica(
         titulo = random.choice(TITULOS_TAREA_GENERICA)
 
         hora_fin = datetime.combine(fecha_dt.date(), time(hour=17, minute=10))
-        #fecha = hora_fin.date()  # targetDate
-
-        logger.info(f"FECHA DEBSE SER TIMESTAMP:  {hora_fin}")       
+              
         logging.info(f"🕓 FinishDate (hora fin): {hora_fin.isoformat()}")
         logging.info(f"⏱️ Horas estimadas: {horas_faltantes:.2f} horas")       
        
@@ -405,24 +409,6 @@ def total_horas_dia_endpoint(
         return {"error": str(e)}
 
 
-# @app.get("/total-horas-dia")
-# def total_horas_dia_endpoint(
-#     usuario: str = Query(..., embed=True),
-#     fecha: str = Query(..., embed=True)
-# ):
-#     try:
-#         logger.info(f"📅 Calculando horas totales para {usuario} en {fecha}")
-#         fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
-
-#         horas = obtener_horas_totales_del_dia(usuario, fecha_dt)
-#         logger.info(f"⏱️ Total horas registradas: {horas['total_horas']:.2f}")
-
-#         return {"usuario": usuario, "fecha": fecha, "horas_trabajadas": horas}
-
-#     except Exception as e:
-#         logger.exception("❌ Error al calcular horas totales")
-#         return {"error": str(e)}
-
     
 @app.post("/cerrar-tareas-dia")
 def cerrar_tareas_dia(
@@ -441,6 +427,7 @@ def cerrar_tareas_dia(
         "mensaje": f"{len(tareas_cerradas)} tareas cerradas",
         "ids_cerrados": tareas_cerradas
     }
+    
 @app.get("/estado-horas-habilitador")
 def estado_horas_habilitador(
     usuario: str = Query(..., description="Nombre del usuario asignado (ej: Mildred Moreno)"),

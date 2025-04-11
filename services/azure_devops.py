@@ -58,11 +58,9 @@ def obtener_horas_totales_del_dia(usuario: str, fecha: date) -> dict:
     proyecto = obtener_proyecto_predeterminado()
 
     tareas_query = f"""
-    SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State], 
-           [Microsoft.VSTS.Scheduling.OriginalEstimate]
+    SELECT [System.Id], [System.Title], [System.WorkItemType], [Microsoft.VSTS.Scheduling.OriginalEstimate]
     FROM WorkItems
     WHERE [System.AssignedTo] CONTAINS '{usuario}'
-    AND [System.State] = 'Closed'
     AND ([System.WorkItemType] = 'Task' OR [System.WorkItemType] = 'Enabler')
     AND [Microsoft.VSTS.Scheduling.TargetDate] = '{fecha}'
     AND [Microsoft.VSTS.Scheduling.FinishDate] = '{fecha}'
@@ -70,6 +68,7 @@ def obtener_horas_totales_del_dia(usuario: str, fecha: date) -> dict:
 
     logger.info("🧾 Consulta WIQL para tareas y habilitadores:")
     logger.info(tareas_query)
+
     logger.info(f"🌐 Ejecutando consulta WIQL en: {BASE_URL}/{proyecto}/_apis/wit/wiql?api-version=6.0")
 
     ids = ejecutar_consulta_wiql(tareas_query, proyecto)
@@ -84,59 +83,22 @@ def obtener_horas_totales_del_dia(usuario: str, fecha: date) -> dict:
         titulo = item["fields"].get("System.Title")
         wid = item["id"]
 
+        # Omitir enablers con tareas hijas
+        if tipo == "Enabler":
+            tiene_hijos = any(
+                rel.get("rel") == "System.LinkTypes.Hierarchy-Forward"
+                for rel in item.get("relations", [])
+            )
+            if tiene_hijos:
+                logger.info(f"🔗 Enabler #{wid} omitido por tener hijos.")
+                continue
+
         logger.info(f"✅ Contabilizado: {tipo} #{wid} - {titulo} - Horas: {estimate}")
         total_horas += estimate
         detalles.append({"id": wid, "tipo": tipo, "titulo": titulo, "horas": estimate})
 
     logger.info(f"🧮 Total de horas del día {fecha}: {total_horas:.2f}")
     return {"total_horas": round(total_horas, 2), "items": detalles}
-
-
-# def obtener_horas_totales_del_dia(usuario: str, fecha: date) -> dict:
-#     proyecto = obtener_proyecto_predeterminado()
-
-#     tareas_query = f"""
-#     SELECT [System.Id], [System.Title], [System.WorkItemType], [Microsoft.VSTS.Scheduling.OriginalEstimate]
-#     FROM WorkItems
-#     WHERE [System.AssignedTo] CONTAINS '{usuario}'
-#     AND ([System.WorkItemType] = 'Task' OR [System.WorkItemType] = 'Enabler')
-#     AND [Microsoft.VSTS.Scheduling.TargetDate] = '{fecha}'
-#     AND [Microsoft.VSTS.Scheduling.FinishDate] = '{fecha}'
-#     """
-
-#     logger.info("🧾 Consulta WIQL para tareas y habilitadores:")
-#     logger.info(tareas_query)
-
-#     logger.info(f"🌐 Ejecutando consulta WIQL en: {BASE_URL}/{proyecto}/_apis/wit/wiql?api-version=6.0")
-
-#     ids = ejecutar_consulta_wiql(tareas_query, proyecto)
-#     workitems = obtener_detalles_workitems(ids)
-
-#     total_horas = 0.0
-#     detalles = []
-
-#     for item in workitems:
-#         tipo = item["fields"].get("System.WorkItemType")
-#         estimate = item["fields"].get("Microsoft.VSTS.Scheduling.OriginalEstimate", 0.0)
-#         titulo = item["fields"].get("System.Title")
-#         wid = item["id"]
-
-#         # Omitir enablers con tareas hijas
-#         if tipo == "Enabler":
-#             tiene_hijos = any(
-#                 rel.get("rel") == "System.LinkTypes.Hierarchy-Forward"
-#                 for rel in item.get("relations", [])
-#             )
-#             if tiene_hijos:
-#                 logger.info(f"🔗 Enabler #{wid} omitido por tener hijos.")
-#                 continue
-
-#         logger.info(f"✅ Contabilizado: {tipo} #{wid} - {titulo} - Horas: {estimate}")
-#         total_horas += estimate
-#         detalles.append({"id": wid, "tipo": tipo, "titulo": titulo, "horas": estimate})
-
-#     logger.info(f"🧮 Total de horas del día {fecha}: {total_horas:.2f}")
-#     return {"total_horas": round(total_horas, 2), "items": detalles}
 
 
 def obtener_actividades_dia(usuario: str, fecha: date):

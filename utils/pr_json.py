@@ -32,28 +32,6 @@ def cargar_prs_revisados_por_fecha(fecha_str):
         logging.error(f"❌ Error al leer el archivo: {e}")
         raise
 
-
-# def cargar_prs_revisados_de_hoy():
-#     fecha_hoy = date.today().strftime('%d_%m_%Y')  # formato 02_04_2025
-#     ruta = f"/home/mildred-moreno/tracking/pr_tracking_{fecha_hoy}.json"
-
-#     logging.info(f"📅 Fecha actual: {fecha_hoy}")
-#     logging.info(f"📂 Intentando cargar archivo de tracking: {ruta}")
-
-#     if not os.path.exists(ruta):
-#         logging.error(f"❌ No se encontró el archivo de tracking: {ruta}")
-#         raise FileNotFoundError(f"No se encontró el archivo de tracking: {ruta}")
-
-#     try:
-#         with open(ruta, "r") as f:
-#             data = json.load(f)
-#             logging.info(f"✅ Archivo cargado exitosamente. Total PRs revisados: {len(data)}")
-#             return data
-#     except Exception as e:
-#         logging.error(f"❌ Error al leer el archivo: {e}")
-#         raise
-
-#     logging.info(f"📥 Archivo cargado exitosamente. Total PRs revisados: {len(data)}")
     
 def generar_resumen_repositorios(fecha: str):
     try:
